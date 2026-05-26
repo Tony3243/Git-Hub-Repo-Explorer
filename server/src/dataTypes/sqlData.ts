@@ -1,7 +1,7 @@
 //what we use to match our dataset columns
 export type Users = {
     id: string,
-    username: string
+    username: string,
     email: string,
     password: string,
     created_at: Date
@@ -14,10 +14,10 @@ export type UserInput = {
     created_at: Date
 }
 
-//generic type for Response paramater that either returns any data specified in the parameter or a error message
+//generic type for Response parameter that either returns any data specified in the parameter or an error message
 export type ApiResponse<T> = T | {message:string}
 
-//what we send back to our db
+//payload for refresh token operations
 export type RefreshInput = {
     user_id: string, 
 }

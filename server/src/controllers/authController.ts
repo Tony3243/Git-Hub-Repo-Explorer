@@ -1,10 +1,10 @@
 import jwt from 'jsonwebtoken'
 import type {JwtPayload} from 'jsonwebtoken'
 import bcrypt from 'bcrypt'
+import {variables} from '../config'
 import { supabase } from '../database/supabase'
 import type {Request, Response} from 'express'
 import type {Users, UserInput, ApiResponse, RefreshInput} from '../dataTypes/sqlData'
-import { access } from 'node:fs'
 
 export async function register(req: Request<{}, {}, {
         username: string,
@@ -53,16 +53,11 @@ export async function login(req: Request<{}, {}, {
     }
 
     try {
-        // Validate environment variables at startup
-        if (!process.env.JWT_TOKEN || !process.env.REFRESH_TOKEN) {
-            throw new Error("JWT_TOKEN and REFRESH_TOKEN must be defined in the environment variables");
-        }
-
         //validates if user email exist in db
         const isUserValid = await supabase.query<Users>(`SELECT id, username, email, password FROM users WHERE email = $1`, [email]);
         if(isUserValid.rows.length === 0) {
             console.log("couldn't find email");
-            return res.status(500).json({message: 'User email or password is invalid'})
+            return res.status(401).json({message: 'User email or password is invalid'})
         }
 
         //Validates if user found
@@ -77,8 +72,8 @@ export async function login(req: Request<{}, {}, {
             return res.status(401).json({message: "User email or password is invalid"})
         }
 
-        const accessToken: string = jwt.sign({id: specificUser.id, email: specificUser.email}, process.env.JWT_TOKEN, {expiresIn: '1h'});
-        const refreshToken: string = jwt.sign({id: specificUser.id, email: specificUser.email}, process.env.REFRESH_TOKEN, {expiresIn: "7d"});
+        const accessToken: string = jwt.sign({id: specificUser.id, email: specificUser.email}, variables.jwtToken, {expiresIn: '1h'});
+        const refreshToken: string = jwt.sign({id: specificUser.id, email: specificUser.email}, variables.refreshToken, {expiresIn: "7d"});
 
         const tokenInsertResult = await supabase.query(`INSERT INTO refresh_tokens(user_id, token) VALUES($1, $2) RETURNING id, user_id, token, created_at`, [specificUser.id, refreshToken]);
         
@@ -86,16 +81,8 @@ export async function login(req: Request<{}, {}, {
             console.error("Failed to store refresh token");
             return res.status(500).json({message: "Failed to complete login"})
         }
-        
-        if (tokenInsertResult.rows.length === 0) {
-            console.error("Failed to store refresh token");
-            return res.status(500).json({message: "Failed to complete login"})
-        }
-
-        console.log("User logged in")
         res.status(200).json({access: accessToken, refresh: refreshToken})
-    } catch (err) {
-        console.log("Having trouble creating tokens");
+    }catch(err) {
         res.status(500).json({message: 'Trouble creating token'})
     }
 }
@@ -109,22 +96,17 @@ export async function refresh(req: Request<{}, {}, {
         return res.status(500).json({message: "Could not find token"})
     }
     try{
-        // Validate environment variables at startup
-        if (!process.env.JWT_TOKEN || !process.env.REFRESH_TOKEN) {
-            throw new Error("JWT_TOKEN and REFRESH_TOKEN must be defined in the environment variables");
-        }
-
         //we only need the userId to create the new accesstoken
         const tokenExist = await supabase.query<RefreshInput>(`SELECT user_id FROM refresh_tokens WHERE token = $1`, [token])
         if(tokenExist.rows.length === 0) {
             console.log("couldn't find matching token");
-            return res.status(500).json({message: "Couldn't find token"})
+            return res.status(401).json({message: "Couldn't find token"})
         }
 
         // verifies token
-        const decoding = jwt.verify(token, process.env.REFRESH_TOKEN) as JwtPayload //JwtPayload handles getting the payload through type Casting and use variable to access id
+        const decoding = jwt.verify(token, variables.refreshToken) as JwtPayload //JwtPayload handles getting the payload through type Casting and use variable to access id
         //uses the payload from .verify to create a new access token.
-        const accessToken: string = jwt.sign({id: decoding.id}, process.env.REFRESH_TOKEN, {expiresIn: '7d'});
+        const accessToken: string = jwt.sign({id: decoding.id}, variables.jwtToken, {expiresIn: '7d'});
         res.status(200).json({accessToken: accessToken})
     }catch(err) {
         console.log("Error in creating refreshtoken");
@@ -137,16 +119,18 @@ export async function logout(req: Request<{}, {}, {token: string}>, res: Respons
     //check if token exist
     if(!token) {
         console.log("Token does not exist");
-        return res.status(500).json({message: "Cannot find token"})
+        return res.status(402).json({message: "Cannot find token"})
+    }
+
+    if(!process.env.REFRESH_TOKEN) {
+        console.log("Refresh does not exist")
+        return res.status(401).json({message: "Refresh does not exist"})
     }
     try {
         //accessing user_id by verifying the token so that it can give us the id
-        const decoding = jwt.verify(token, process.env.REFRESH_TOKEN!) as JwtPayload
-
-        //deleting token by comparing user_id and token to be extra safe
+        const decoding = jwt.verify(token, process.env.REFRESH_TOKEN) as JwtPayload
         const deletingToken = await supabase.query(`DELETE FROM refresh_tokens WHERE token = $1 and user_id = $2`, [token, decoding.id]);
-        //check if token was deleted
-        if(deletingToken.rows[0]) {
+        if(deletingToken.rowCount === 0) {
             console.log("Couldn't delete token");
             return res.status(500).json({message: "Couldn't delete token"})
         }

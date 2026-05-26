@@ -6,7 +6,7 @@ import { authRoute } from './routes/authRoute';
 const app: Express = express();
 
 app.use(express.json())
-app.use(express.urlencoded({extended: true}))//handles data wth special characters (password, email)
+app.use(express.urlencoded({extended: true}))//handles data with special characters (password, email)
 
 const PORT: number = 8000;
 
