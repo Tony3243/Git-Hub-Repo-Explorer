@@ -14,5 +14,10 @@ export type UserInput = {
     created_at: Date
 }
 
-//generic type for Response paramater that either return my data or a error message
+//generic type for Response paramater that either returns any data specified in the parameter or a error message
 export type ApiResponse<T> = T | {message:string}
+
+//what we send back to our db
+export type RefreshInput = {
+    user_id: string, 
+}

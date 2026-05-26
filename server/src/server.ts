@@ -6,12 +6,13 @@ import { authRoute } from './routes/authRoute';
 const app: Express = express();
 
 app.use(express.json())
+app.use(express.urlencoded({extended: true}))//handles data wth special characters (password, email)
 
 const PORT: number = 8000;
 
-
 //http://localhost:8000/api/auth/register
 app.use('/api/auth', authRoute)
+
 
 
 app.listen(PORT, ():void => console.log(`Listening on port ${PORT}`))
