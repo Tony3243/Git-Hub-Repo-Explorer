@@ -1,3 +1,5 @@
+import type { JwtPayload } from "jsonwebtoken"
+
 //what we use to match our dataset columns
 export type Users = {
     id: string,
@@ -21,3 +23,9 @@ export type ApiResponse<T> = T | {message:string}
 export type RefreshInput = {
     user_id: string, 
 }
+
+//OUR RESPONSE GENERICS
+ export type Payload = {message: string} | {decoded: JwtPayload}
+
+ //for our res.local to send data to our gitControllers
+ export type Local = {user: JwtPayload}
