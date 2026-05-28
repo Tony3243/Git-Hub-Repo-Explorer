@@ -1,4 +1,4 @@
-//favorite db, what 
+// Favorite repository record from database
 export type Repos = {
     id?: string,
     user_id?: string,
@@ -6,11 +6,11 @@ export type Repos = {
     repo_name?: string,
     repo_url?: string,
     description?: string,
-    rating?: number
+    rating?: number,
     created_at?: Date
 }
 
-//what client recieves back
+// What client receives back
 export type Client = {
     repo_name: string,
     repo_url: string,
