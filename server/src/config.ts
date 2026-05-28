@@ -1,3 +1,4 @@
+//validates if environment varaibles exist before starting server
 import dotenv from 'dotenv'
 dotenv.config()
 
